@@ -1,1 +1,30 @@
-<html><body><h1>Flight Sim Map</h1></body></html>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flight Sim Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([-14.2350, -51.9253], 4); // Brasil
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+    }).addTo(map);
+
+    // Exemplo de marcador de aeroporto
+    L.marker([-23.4356, -46.4731]).addTo(map)
+      .bindPopup('SBGR - Guarulhos');
+
+    L.marker([-22.9105, -43.1631]).addTo(map)
+      .bindPopup('SBGL - Galeão');
+  </script>
+</body>
+</html>
