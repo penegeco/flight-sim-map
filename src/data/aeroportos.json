@@ -1,0 +1,83 @@
+// Este arquivo exporta uma lista de aeroportos brasileiros com coordenadas para uso em mapas e rotas
+export const aeroportosBrasileiros = [
+  {
+    ICAO: "SBGR",
+    IATA: "GRU",
+    Nome_Aeroporto: "Guarulhos - Governador André Franco Montoro International Airport",
+    Cidade: "São Paulo",
+    Latitude: -23.4356,
+    Longitude: -46.4731
+  },
+  {
+    ICAO: "SBSP",
+    IATA: "CGH",
+    Nome_Aeroporto: "Congonhas Airport",
+    Cidade: "São Paulo",
+    Latitude: -23.6261,
+    Longitude: -46.6566
+  },
+  {
+    ICAO: "SBRJ",
+    IATA: "SDU",
+    Nome_Aeroporto: "Santos Dumont Airport",
+    Cidade: "Rio de Janeiro",
+    Latitude: -22.9105,
+    Longitude: -43.1631
+  },
+  {
+    ICAO: "SBGL",
+    IATA: "GIG",
+    Nome_Aeroporto: "Galeão - Antônio Carlos Jobim International Airport",
+    Cidade: "Rio de Janeiro",
+    Latitude: -22.8090,
+    Longitude: -43.2506
+  },
+  {
+    ICAO: "SBCF",
+    IATA: "CNF",
+    Nome_Aeroporto: "Tancredo Neves International Airport",
+    Cidade: "Belo Horizonte",
+    Latitude: -19.6244,
+    Longitude: -43.9711
+  },
+  {
+    ICAO: "SBPA",
+    IATA: "POA",
+    Nome_Aeroporto: "Salgado Filho International Airport",
+    Cidade: "Porto Alegre",
+    Latitude: -29.9944,
+    Longitude: -51.1714
+  },
+  {
+    ICAO: "SBBR",
+    IATA: "BSB",
+    Nome_Aeroporto: "Presidente Juscelino Kubitschek International Airport",
+    Cidade: "Brasília",
+    Latitude: -15.8692,
+    Longitude: -47.9208
+  },
+  {
+    ICAO: "SBSV",
+    IATA: "SSA",
+    Nome_Aeroporto: "Deputado Luís Eduardo Magalhães International Airport",
+    Cidade: "Salvador",
+    Latitude: -12.9100,
+    Longitude: -38.3311
+  },
+  {
+    ICAO: "SBFZ",
+    IATA: "FOR",
+    Nome_Aeroporto: "Pinto Martins – Fortaleza International Airport",
+    Cidade: "Fortaleza",
+    Latitude: -3.7763,
+    Longitude: -38.5326
+  },
+  {
+    ICAO: "SBRF",
+    IATA: "REC",
+    Nome_Aeroporto: "Guararapes - Gilberto Freyre International Airport",
+    Cidade: "Recife",
+    Latitude: -8.1268,
+    Longitude: -34.9230
+  }
+];
