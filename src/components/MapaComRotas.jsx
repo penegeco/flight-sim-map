@@ -1,48 +1,57 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import { aeroportosBrasileiros } from '../../aeroportosBrasileiros';
-import { aeroportosBrasileiros } from '../data/aeroportos';
-import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
+import { aeroportosBrasileiros } from '../../aeroportosBrasileiros'; // ajuste se necessário
 import L from 'leaflet';
-import iconUrl from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Define o ícone padrão dos marcadores
-const defaultIcon = L.icon({
-  iconUrl,
-  shadowUrl: iconShadow,
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = defaultIcon;
+const MapaComRotas = () => {
+  const position = [-15.77972, -47.92972]; // Centro aproximado do Brasil
+  const zoom = 4.5;
 
-export default function MapaComRotas() {
-  // Gerar rotas entre os aeroportos em sequência
-  const rotas = aeroportosBrasileiros.map((aeroporto) => [
-    aeroporto.Latitude,
-    aeroporto.Longitude,
-  ]);
+  // Definição do ícone azul padrão
+  const icon = new L.Icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
+
+  // Criando as rotas entre aeroportos (exemplo: sequencial)
+  const rotas = [];
+  for (let i = 0; i < aeroportosBrasileiros.length - 1; i++) {
+    const origem = aeroportosBrasileiros[i];
+    const destino = aeroportosBrasileiros[i + 1];
+    rotas.push([
+      [origem.Latitude, origem.Longitude],
+      [destino.Latitude, destino.Longitude],
+    ]);
+  }
 
   return (
-    <MapContainer center={[-15.78, -47.93]} zoom={4} style={{ height: '100vh', width: '100%' }}>
+    <MapContainer center={position} zoom={zoom} style={{ height: '100vh', width: '100%' }}>
       <TileLayer
+        attribution='&copy; OpenStreetMap'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
       />
-
       {aeroportosBrasileiros.map((aeroporto, index) => (
         <Marker
           key={index}
           position={[aeroporto.Latitude, aeroporto.Longitude]}
+          icon={icon}
         >
           <Popup>
             <strong>{aeroporto.Nome_Aeroporto}</strong><br />
-            ICAO: {aeroporto.ICAO} | IATA: {aeroporto.IATA}<br />
+            ICAO: {aeroporto.ICAO}<br />
+            IATA: {aeroporto.IATA}<br />
             Cidade: {aeroporto.Cidade}
           </Popup>
         </Marker>
       ))}
-
-      {/* Linha conectando os aeroportos */}
-      <Polyline positions={rotas} color="blue" />
+      {rotas.map((rota, index) => (
+        <Polyline key={index} positions={rota} color="red" />
+      ))}
     </MapContainer>
   );
-}
+};
+
+export default MapaComRotas;
