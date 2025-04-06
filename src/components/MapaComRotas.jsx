@@ -1,4 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { aeroportosBrasileiros } from '../../aeroportosBrasileiros';
 import { aeroportosBrasileiros } from '../data/aeroportos';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
