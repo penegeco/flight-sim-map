@@ -3,10 +3,10 @@ import { ImageOverlay } from "react-leaflet";
 function CartaREAOverlay({ visible }) {
   if (!visible) return null;
 
-const bounds = [
-  [-24.90, -48.0],  // Ajuste para baixo e mais à esquerda
-  [-22.00, -43.80]  // Ajuste para cima e mais à direita
-];
+  const bounds = [
+    [-24.667, -48.002], // canto inferior esquerdo (sul/oeste)
+    [-22.1667, -44.0]  // canto superior direito (norte/leste)
+  ];
 
   return (
     <ImageOverlay

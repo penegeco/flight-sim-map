@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer } from "react-leaflet";
 import { useState } from "react";
 import CartaREAOverlay from "./components/CartaREAOverlay";
+import Navegacao from "./components/Navegacao";
 
 function MapView() {
   const [showREA, setShowREA] = useState(false);
@@ -31,6 +32,7 @@ function MapView() {
         />
 
         <CartaREAOverlay visible={showREA} />
+	<Navegacao />
       </MapContainer>
     </div>
   );
