@@ -3,6 +3,7 @@ import {
   Marker,
   Polyline,
   useMapEvents,
+  useMap,
 } from "react-leaflet";
 import { Icon } from "leaflet";
 import aeroportos from "../data/aeroportosBrasileiros";
@@ -20,8 +21,6 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { saveAs } from "file-saver";
-import jsPDF from "jspdf";
 
 const icon = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -36,14 +35,47 @@ function distanciaNM(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return (R * c) / 1.852;
 }
 
-function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude }) {
+async function getDeclinacaoMagnetica(lat, lon) {
+  const baseUrl = "https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination";
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    resultFormat: "json",
+    model: "WMM",
+    startYear: "2025",
+    endYear: "2025",
+  });
+  const url = `${baseUrl}?${params.toString()}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.result[0].declination;
+  } catch (err) {
+    console.error("Erro ao obter declinação:", err);
+    return -21.3;
+  }
+}
+
+async function calcularHeadingComDeclinacao(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const toDeg = (rad) => (rad * 180) / Math.PI;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  const brgTrue = (toDeg(Math.atan2(y, x)) + 360) % 360;
+  const decl = await getDeclinacaoMagnetica(lat1, lon1);
+  const brgMag = (brgTrue - decl + 360) % 360;
+  return { hdgMag: brgMag, decl };
+}
+
+function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude, onDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: ponto.icao });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -58,23 +90,21 @@ function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude }) {
     borderRadius: "4px",
     marginBottom: "4px",
   };
+
   return (
-    <li ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <li ref={setNodeRef} style={style} {...attributes}>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <span style={{ width: "60px", fontWeight: "bold" }}>{ponto.icao}</span>
-        <input
-          type="text"
-          value={ponto.nome}
-          onChange={(e) => onEditNome(ponto.icao, e.target.value)}
-          style={{ flex: 1 }}
-        />
-        <input
-          type="number"
-          value={ponto.altitude}
-          onChange={(e) => onEditAltitude(ponto.icao, Number(e.target.value))}
-          style={{ width: "60px" }}
-          placeholder="Alt (ft)"
-        />
+        <span
+  style={{ width: "60px", fontWeight: "bold", cursor: "grab" }}
+  {...listeners}
+>
+  {ponto.icao}
+</span>
+        <input type="text" value={ponto.nome} onChange={(e) => onEditNome(ponto.icao, e.target.value)} style={{ flex: 1 }} />
+        <input type="number" value={ponto.altitude} onChange={(e) => onEditAltitude(ponto.icao, Number(e.target.value))} style={{ width: "60px" }} placeholder="Alt (ft)" />
+        {ponto.tipo !== "origem" && ponto.tipo !== "destino" && (
+          <button onClick={() => onDelete(ponto.icao)} style={{ background: "red", color: "white", border: "none", borderRadius: "4px", padding: "4px" }}>✕</button>
+        )}
       </div>
       <div style={{ fontSize: "12px", color: "#444" }}>
         ⏱ Acumulado: {tempoAcumulado} min | Altitude: {ponto.altitude} ft
@@ -84,151 +114,164 @@ function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude }) {
 }
 
 export default function Navegacao() {
+  const [origem, setOrigem] = useState("");
+  const [destino, setDestino] = useState("");
   const [rota, setRota] = useState([]);
   const [velocidade, setVelocidade] = useState(120);
   const [trechos, setTrechos] = useState([]);
+  const map = useMap();
+  const sensors = useSensors(useSensor(PointerSensor));
 
-  const adicionarPonto = (ponto) => setRota((prev) => [...prev, ponto]);
-  const limparRota = () => { setRota([]); setTrechos([]); };
-
-  const editarNomePonto = (icao, novoNome) => {
-    setRota((prev) => prev.map((p) => p.icao === icao ? { ...p, nome: novoNome } : p));
-  };
-  const editarAltitudePonto = (icao, novaAlt) => {
-    setRota((prev) => prev.map((p) => p.icao === icao ? { ...p, altitude: novaAlt } : p));
+  const excluirWaypoint = (icao) => {
+    setRota((prev) => prev.filter((p) => p.icao !== icao));
   };
 
-  const generatePln = () => {
-    const xmlHeader = `<?xml version="1.0" encoding="UTF-8"?>`;
-    const header = `<SimBase.Document Type="AceXML" version="1,0">
-  <Descr>Flight plan</Descr>
-  <FlightPlan.FlightPlan>`;
-    const footer = `  </FlightPlan.FlightPlan>
-</SimBase.Document>`;
-    const body = rota.map((ponto, idx) => `
-    <ATCWaypoint id="${ponto.icao}">
-      <ATCWaypointType>${idx === 0 ? "Departure" : idx === rota.length - 1 ? "Destination" : "Enroute"}</ATCWaypointType>
-      <WorldPosition>${ponto.lon.toFixed(6)} ${ponto.lat.toFixed(6)} ${ponto.altitude}</WorldPosition>
-      <Altitude>${ponto.altitude}</Altitude>
-    </ATCWaypoint>`).join("\n");
+  function handleOrigemChange(e) {
+    const icao = e.target.value;
+    setOrigem(icao);
+    const ap = aeroportos.find(a => a.icao === icao);
+    if (ap) {
+      ap.tipo = "origem";
+      setRota(prev => [ap, ...prev.filter(p => p.tipo !== "origem")]);
+      map.setView([ap.lat, ap.lon], 10);
+    }
+  }
 
-    const fullXml = `${xmlHeader}\n${header}\n${body}\n${footer}`;
-    const blob = new Blob([fullXml], { type: "text/xml;charset=utf-8" });
-    saveAs(blob, "plano-de-voo.pln");
-  };
+  function handleDestinoChange(e) {
+    const icao = e.target.value;
+    setDestino(icao);
+    const ap = aeroportos.find(a => a.icao === icao);
+    if (ap) {
+      ap.tipo = "destino";
+      setRota(prev => [...prev.filter(p => p.tipo !== "destino"), ap]);
+      map.setView([ap.lat, ap.lon], 10);
+    }
+  }
 
-  const generatePdf = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Briefing de Navegação", 20, 20);
-    doc.setFontSize(12);
-    rota.forEach((ponto, idx) => {
-      const y = 30 + idx * 10;
-      doc.text(`${idx+1}. ${ponto.icao} - ${ponto.nome} | Alt: ${ponto.altitude} ft`, 20, y);
+  function adicionarPonto(ponto) {
+    ponto.tipo = "intermediario";
+    setRota(prev => {
+      const inicio = prev.find(p => p.tipo === "origem");
+      const fim = prev.find(p => p.tipo === "destino");
+      const meio = prev.filter(p => p.tipo === "intermediario");
+      return [
+        ...(inicio ? [inicio] : []),
+        ...meio,
+        ponto,
+        ...(fim ? [fim] : [])
+      ];
     });
-    doc.text("\nTrechos:", 20, 30 + rota.length * 10);
-    trechos.forEach((t, i) => {
-      const y = 40 + rota.length * 10 + i * 10;
-      doc.text(`${t.origem} → ${t.destino} | ${t.dist} NM | ${t.tempo} min | Acum: ${t.tempoAcumulado} min`, 20, y);
-    });
-    doc.save("navegacao.pdf");
-  };
+  }
+
+  function editarNomePonto(icao, novoNome) {
+    setRota(prev => prev.map(p => p.icao === icao ? { ...p, nome: novoNome } : p));
+  }
+
+  function editarAltitudePonto(icao, novaAlt) {
+    setRota(prev => prev.map(p => p.icao === icao ? { ...p, altitude: novaAlt } : p));
+  }
+
+  function limparRota() {
+    setOrigem("");
+    setDestino("");
+    setRota([]);
+    setTrechos([]);
+  }
 
   useMapEvents({
     click(e) {
-      adicionarPonto({ nome: "Ponto Livre", icao: `WP${rota.length+1}`, lat: e.latlng.lat, lon: e.latlng.lng, altitude: 3000 });
-    },
+      if (e.originalEvent.target.closest(".controle-rota")) return;
+      adicionarPonto({
+        nome: "Ponto Livre",
+        icao: `WP${rota.length + 1}`,
+        lat: e.latlng.lat,
+        lon: e.latlng.lng,
+        altitude: 3000,
+      });
+    }
   });
 
-  const sensors = useSensors(useSensor(PointerSensor));
-  const handleDragEnd = ({ active, over }) => {
+  function handleDragEnd({ active, over }) {
     if (active.id !== over.id) {
-      const oldIndex = rota.findIndex((p) => p.icao === active.id);
-      const newIndex = rota.findIndex((p) => p.icao === over.id);
-      setRota((items) => arrayMove(items, oldIndex, newIndex));
+      const oldIndex = rota.findIndex(p => p.icao === active.id);
+      const newIndex = rota.findIndex(p => p.icao === over.id);
+      setRota(items => arrayMove(items, oldIndex, newIndex));
     }
-  };
+  }
 
   useEffect(() => {
-    if (rota.length < 2) return setTrechos([]);
+    if (rota.length < 2) {
+      setTrechos([]);
+      return;
+    }
     (async () => {
-      let tempoAcumulado = 0;
-      const novoTrechos = rota.slice(1).map((atual, i) => {
-        const anterior = rota[i];
-        const dist = distanciaNM(anterior.lat, anterior.lon, atual.lat, atual.lon);
-        const tempo = (dist/velocidade)*60;
-        tempoAcumulado += tempo;
-        return {
-          origem: anterior.icao,
-          destino: atual.icao,
-          dist: dist.toFixed(1),
-          tempo: tempo.toFixed(0),
-          tempoAcumulado: tempoAcumulado.toFixed(0),
-        };
-      });
-      setTrechos(novoTrechos);
+      let acum = 0;
+      const novo = [];
+      for (let i = 1; i < rota.length; i++) {
+        const a = rota[i - 1];
+        const b = rota[i];
+        const d = distanciaNM(a.lat, a.lon, b.lat, b.lon);
+        const t = (d / velocidade) * 60;
+        acum += t;
+        const { hdgMag, decl } = await calcularHeadingComDeclinacao(a.lat, a.lon, b.lat, b.lon);
+        novo.push({ origem: a.icao, destino: b.icao, dist: d.toFixed(1), tempo: t.toFixed(0), tempoAcumulado: acum.toFixed(0), heading: hdgMag.toFixed(0), decl: decl.toFixed(1) });
+      }
+      setTrechos(novo);
     })();
   }, [rota, velocidade]);
 
   return (
     <>
-      <div style={{ position: "absolute", top:60, right:10, zIndex:1000, background:"white", padding:"10px", borderRadius:"8px", width:"340px", fontSize:"14px" }}>
-        <input type="text" placeholder="Buscar aeroporto..." onChange={(e)=>{
-          const termo=e.target.value.toLowerCase();
-          const resultado=aeroportos.find(a=>a.icao.toLowerCase().includes(termo)||a.iata.toLowerCase().includes(termo)||a.nome.toLowerCase().includes(termo));
-          if(resultado) adicionarPonto({ ...resultado, nome:resultado.nome, altitude:resultado.altitude??3000 });
-        }} />
-
-        <div style={{ marginTop:"10px" }}>
-          <label>Velocidade (kt): </label>
-          <input type="number" value={velocidade} onChange={e=>setVelocidade(Number(e.target.value))} style={{ width:"60px" }} />
+      <div className="controle-rota" style={{ position: 'absolute', top: 60, right: 10, zIndex: 1000, background: 'white', padding: 10, borderRadius: 8, width: 340, fontSize: 14 }}>
+        <div>
+          <label>Origem:</label>
+          <select value={origem} onChange={handleOrigemChange} style={{ width: '100%', margin: '4px 0' }}>
+            <option value="">-- selecione --</option>
+            {aeroportos.map(a => <option key={a.icao} value={a.icao}>{a.icao} - {a.nome}</option>)}
+          </select>
         </div>
-
-        <button onClick={limparRota} style={{ marginTop:"10px" }}>Limpar rota</button>
-        <button onClick={generatePln} style={{ marginTop:"10px" }}>Exportar .PLN</button>
-        <button onClick={generatePdf} style={{ marginTop:"10px" }}>Download PDF</button>
-
-        <h4>Rota (arraste para reordenar):</h4>
+        <div>
+          <label>Destino:</label>
+          <select value={destino} onChange={handleDestinoChange} style={{ width: '100%', margin: '4px 0' }}>
+            <option value="">-- selecione --</option>
+            {aeroportos.map(a => <option key={a.icao} value={a.icao}>{a.icao} - {a.nome}</option>)}
+          </select>
+        </div>
+        <div style={{ margin: '6px 0' }}>
+          <label>Velocidade (kt):</label>
+          <input type="number" value={velocidade} onChange={e => setVelocidade(Number(e.target.value))} style={{ width: 60, marginLeft: 4 }} />
+        </div>
+        <button onClick={limparRota}>Limpar rota</button>
+        <h4 style={{ margin: '10px 0 6px' }}>Rota (arraste):</h4>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={rota.map(p=>p.icao)} strategy={verticalListSortingStrategy}>
-            <ul style={{ padding:0, margin:0, listStyle:"none" }}>
-              {rota.map((ponto, idx) => (
-                <SortableItem
-                  key={ponto.icao}
-                  ponto={ponto}
-                  tempoAcumulado={idx===0?0:trechos[idx-1]?.tempoAcumulado||0}
-                  onEditNome={editarNomePonto}
-                  onEditAltitude={editarAltitudePonto}
-                />
+          <SortableContext items={rota.map(p => p.icao)} strategy={verticalListSortingStrategy}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 200, overflowY: 'auto' }}>
+              {rota.map((p, i) => (
+                <SortableItem key={p.icao} ponto={p} tempoAcumulado={trechos[i - 1]?.tempoAcumulado || 0} onEditNome={editarNomePonto} onEditAltitude={editarAltitudePonto} onDelete={excluirWaypoint} />
               ))}
             </ul>
           </SortableContext>
         </DndContext>
-
-        {trechos.length>0 && (
-          <>
-            <h4>Trechos:</h4>
-            <ul>
-              {trechos.map((t,i)=>(
-                <li key={i} style={{ marginBottom:"8px" }}>
-                  <strong>{t.origem} → {t.destino}</strong><br />
-                  {t.dist} NM | ⏱ {t.tempo} min<br />
-                  Acumulado: {t.tempoAcumulado} min<br />
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        {trechos.length > 0 && <>
+          <h4>Trechos:</h4>
+          <ul style={{ listStyle: 'none', padding: 0, maxHeight: 180, overflowY: 'auto' }}>
+            {trechos.map((t, i) => (
+              <li key={i} style={{ margin: '4px 0' }}>
+                <strong>{t.origem}→{t.destino}</strong> {t.dist}NM • HDG{t.heading}° MAG • ⏱{t.tempo}min • Acum {t.tempoAcumulado}min • Decl {t.decl}°
+              </li>
+            ))}
+          </ul>
+        </>}
       </div>
-
-      {rota.map((ponto,idx)=>(
-        <Marker key={idx} position={[ponto.lat,ponto.lon]} icon={icon} draggable eventHandlers={{ dragend:e=>{
-          const { lat, lng }=e.target.getLatLng();
-          setRota(prev=>prev.map((p,i)=>i===idx?{...p,lat,lng}:p));
-        } }} />
+      {rota.map((p, idx) => (
+        <Marker key={idx} position={[p.lat, p.lon]} icon={icon} draggable eventHandlers={{
+          dragend: e => {
+            const { lat, lng } = e.target.getLatLng();
+            setRota(prev => prev.map(x => x.icao === p.icao ? { ...x, lat, lon: lng } : x));
+          }
+        }} />
       ))}
-
-      {rota.length>1 && <Polyline positions={rota.map(p=>[p.lat,p.lon])} color="blue" />}
+      {rota.length > 1 && <Polyline positions={rota.map(p => [p.lat, p.lon])} color="blue" />}
     </>
   );
 }
