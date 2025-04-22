@@ -182,11 +182,11 @@ export default function Navegacao() {
     click(e) {
       if (e.originalEvent.target.closest(".controle-rota")) return;
       adicionarPonto({
-        nome: "Ponto Livre",
+        nome: "",
         icao: `WP${rota.length + 1}`,
         lat: e.latlng.lat,
         lon: e.latlng.lng,
-        altitude: 3000,
+        altitude: 5500,
       });
     }
   });
