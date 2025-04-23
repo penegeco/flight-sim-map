@@ -9,7 +9,7 @@ export default function MapView() {
   const [showPanel, setShowPanel] = useState(true);
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
       {/* Botão Carta REA */}
       <button
         onClick={() => setShowREA(prev => !prev)}
@@ -72,8 +72,10 @@ export default function MapView() {
 
         <CartaREAOverlay visible={showREA} />
 
-        {/* Tela de descrição da rota: oculta sem limpar dados */}
-        {showPanel && <Navegacao />}
+        {/* Mantém Navegacao sempre montado, mas oculta visualmente quando necessário */}
+        <div style={{ display: showPanel ? 'block' : 'none' }}>
+          <Navegacao />
+        </div>
 
       </MapContainer>
     </div>
