@@ -5,7 +5,7 @@ import CartaREAOverlay from "./components/CartaREAOverlay";
 import Navegacao from "./components/Navegacao";
 
 export default function MapView() {
-  const [showREA, setShowREA]   = useState(false);
+  const [showREA, setShowREA] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
 
   return (
@@ -72,6 +72,7 @@ export default function MapView() {
 
         <CartaREAOverlay visible={showREA} />
 
+        {/* Tela de descrição da rota: oculta sem limpar dados */}
         {showPanel && <Navegacao />}
 
       </MapContainer>
