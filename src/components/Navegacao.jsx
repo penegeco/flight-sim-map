@@ -1,3 +1,5 @@
+import geomagnetism from 'geomagnetism';
+import { exportRouteToPDF } from "../utils/pdfExporter";
 import { useEffect, useState } from "react";
 import {
   Marker,
@@ -22,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+
 const icon = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconSize: [25, 41],
@@ -40,25 +43,10 @@ function distanciaNM(lat1, lon1, lat2, lon2) {
   return (R * c) / 1.852;
 }
 
-async function getDeclinacaoMagnetica(lat, lon) {
-  const baseUrl = "https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination";
-  const params = new URLSearchParams({
-    latitude: lat,
-    longitude: lon,
-    resultFormat: "json",
-    model: "WMM",
-    startYear: "2025",
-    endYear: "2025",
-  });
-  const url = `${baseUrl}?${params.toString()}`;
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.result[0].declination;
-  } catch (err) {
-    console.error("Erro ao obter declinação:", err);
-    return -21.3;
-  }
+function getDeclinacao(lat, lon) {
+  const model = geomagnetism.model();
+  const result = model.point([lat, lon]);
+  return result.decl;
 }
 
 async function calcularHeadingComDeclinacao(lat1, lon1, lat2, lon2) {
@@ -70,7 +58,7 @@ async function calcularHeadingComDeclinacao(lat1, lon1, lat2, lon2) {
     Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
     Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
   const brgTrue = (toDeg(Math.atan2(y, x)) + 360) % 360;
-  const decl = await getDeclinacaoMagnetica(lat1, lon1);
+  const decl = await getDeclinacao(lat1, lon1);
   const brgMag = (brgTrue - decl + 360) % 360;
   return { hdgMag: brgMag, decl };
 }
@@ -242,6 +230,21 @@ export default function Navegacao() {
           <input type="number" value={velocidade} onChange={e => setVelocidade(Number(e.target.value))} style={{ width: 60, marginLeft: 4 }} />
         </div>
         <button onClick={limparRota}>Limpar rota</button>
+	<button
+  	onClick={() => exportRouteToPDF(rota, trechos)}
+  	style={{
+    	marginTop: 10,
+    	marginBottom: 10,
+    	background: "#007bff",
+    	color: "white",
+    	border: "none",
+    	padding: "6px 10px",
+    	borderRadius: 4
+  	}}
+	>
+  	Exportar rota para PDF
+	</button>
+
         <h4 style={{ margin: '10px 0 6px' }}>Rota (arraste):</h4>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={rota.map(p => p.icao)} strategy={verticalListSortingStrategy}>

@@ -15,8 +15,10 @@
     "@dnd-kit/sortable": "^10.0.0",
     "file-saver": "^2.0.5",
     "geomag": "^1.0.0",
+    "geomagnetism": "^0.2.0",
     "jspdf": "^3.0.1",
     "leaflet": "^1.9.4",
+    "pdfmake": "^0.2.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0"
