@@ -1,3 +1,5 @@
+import L from "leaflet";
+import { crsLambert } from "./map/crsLambert";
 import { MapContainer, TileLayer } from "react-leaflet";
 import { useState } from "react";
 import { Layers, List } from "lucide-react";
@@ -60,15 +62,19 @@ export default function MapView() {
         <List size={20} />
       </button>
 
-      <MapContainer
-        center={[-23.2, -46.5]}
-        zoom={8}
-        style={{ height: "100vh", width: "100%" }}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="© OpenStreetMap contributors"
-        />
+ <MapContainer
+  center={[-23.2, -46.5]}
+  zoom={8}
+  style={{ height: "100vh", width: "100%" }}
+  whenCreated={(mapInstance) => {
+    window._leaflet_map = mapInstance;
+  }}
+>
+  <TileLayer
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    attribution="© OpenStreetMap contributors"
+  />
+
 
         <CartaREAOverlay visible={showREA} />
 

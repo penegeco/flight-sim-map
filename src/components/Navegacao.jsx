@@ -1,3 +1,4 @@
+import leafletImage from "leaflet-image";
 import geomagnetism from 'geomagnetism';
 import { exportRouteToPDF } from "../utils/pdfExporter";
 import { useEffect, useState } from "react";
@@ -23,7 +24,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
+import html2canvas from "html2canvas";
+import { exportRouteToFS2020 } from "../utils/fsExporter";
 
 const icon = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -89,7 +91,33 @@ function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude, onDel
   {ponto.icao}
 </span>
         <input type="text" value={ponto.nome} onChange={(e) => onEditNome(ponto.icao, e.target.value)} style={{ flex: 1 }} />
-        <input type="number" value={ponto.altitude} onChange={(e) => onEditAltitude(ponto.icao, Number(e.target.value))} style={{ width: "60px" }} placeholder="Alt (ft)" />
+        <input
+  type="number"
+  value={ponto.altitude}
+  step="500"
+  onChange={(e) => {
+    const raw = Number(e.target.value);
+    const prev = ponto.altitude || 0;
+    const step = 500;
+    let final;
+
+    // Se foi um “salto” de exatamente 500 (seta) e o valor anterior não era múltiplo de 500
+    if (prev % step !== 0 && Math.abs(raw - prev) === step) {
+      // seta para cima
+      if (raw > prev) final = Math.ceil(prev / step) * step;
+      // seta para baixo
+      else final = Math.floor(prev / step) * step;
+    } else {
+      // digitação livre ou salto maior
+      final = raw;
+    }
+
+    onEditAltitude(ponto.icao, final);
+  }}
+  style={{ width: "60px" }}
+  placeholder="Alt (ft)"
+/>
+
         {ponto.tipo !== "origem" && ponto.tipo !== "destino" && (
           <button onClick={() => onDelete(ponto.icao)} style={{ background: "red", color: "white", border: "none", borderRadius: "4px", padding: "4px" }}>✕</button>
         )}
@@ -102,17 +130,49 @@ function SortableItem({ ponto, tempoAcumulado, onEditNome, onEditAltitude, onDel
 }
 
 export default function Navegacao() {
+  const map = useMap();
   const [origem, setOrigem] = useState("");
   const [destino, setDestino] = useState("");
   const [rota, setRota] = useState([]);
   const [velocidade, setVelocidade] = useState(120);
   const [trechos, setTrechos] = useState([]);
-  const map = useMap();
   const sensors = useSensors(useSensor(PointerSensor));
-
   const excluirWaypoint = (icao) => {
     setRota((prev) => prev.filter((p) => p.icao !== icao));
   };
+    
+const handleExport = async () => {
+  try {
+    const mapContainer = document.querySelector(".leaflet-container");
+    if (!mapContainer) {
+      console.error("Mapa não encontrado.");
+      return;
+    }
+
+    // Esconde os controles da rota antes de capturar
+    const controleRota = document.querySelector(".controle-rota");
+    if (controleRota) {
+      controleRota.style.visibility = "hidden";
+    }
+
+    // Dá um tempinho para o navegador atualizar
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Captura tudo (TileLayer + Polyline + CartaREA + Marcadores)
+    const canvas = await html2canvas(mapContainer, { useCORS: true });
+
+    // Volta a exibir o painel
+    if (controleRota) {
+      controleRota.style.visibility = "visible";
+    }
+
+    const imgBase64 = canvas.toDataURL("image/png");
+
+    exportRouteToPDF(rota, trechos, imgBase64);
+  } catch (err) {
+    console.error("Erro ao gerar PDF:", err);
+  }
+};
 
   function handleOrigemChange(e) {
     const icao = e.target.value;
@@ -230,21 +290,21 @@ export default function Navegacao() {
           <input type="number" value={velocidade} onChange={e => setVelocidade(Number(e.target.value))} style={{ width: 60, marginLeft: 4 }} />
         </div>
         <button onClick={limparRota}>Limpar rota</button>
+	<button onClick={handleExport}>Exportar rota para PDF</button>
 	<button
-  	onClick={() => exportRouteToPDF(rota, trechos)}
+  	onClick={() => exportRouteToFS2020(rota)}
   	style={{
-    	marginTop: 10,
-    	marginBottom: 10,
-    	background: "#007bff",
-    	color: "white",
+    	marginTop: 8,
+    	background: "#28a745",
+    	color: "#fff",
     	border: "none",
     	padding: "6px 10px",
-    	borderRadius: 4
+    	borderRadius: 4,
+    	cursor: "pointer"
   	}}
 	>
-  	Exportar rota para PDF
+  	Exportar para Flight Simulator (.fpl)
 	</button>
-
         <h4 style={{ margin: '10px 0 6px' }}>Rota (arraste):</h4>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={rota.map(p => p.icao)} strategy={verticalListSortingStrategy}>

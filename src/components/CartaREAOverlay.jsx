@@ -12,7 +12,7 @@ function CartaREAOverlay({ visible }) {
     <ImageOverlay
       url="/cartas/CCV_REA_TMA_SP_VALE_DO_PARAIBA_20_MAIO.png"
       bounds={bounds}
-      opacity={0.6}
+      opacity={1}
     />
   );
 }
