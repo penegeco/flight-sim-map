@@ -10,7 +10,7 @@ function CartaREAOverlay({ visible }) {
 
   return (
     <ImageOverlay
-      url="/cartas/CCV_REA_TMA_SP_VALE_DO_PARAIBA_20_MAIO.png"
+      url="/cartas/CCV_REA_TMA_SP_VALE_DO_PARAIBA_20_MAIO.jpg"
       bounds={bounds}
       opacity={1}
     />

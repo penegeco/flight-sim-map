@@ -11,21 +11,24 @@ export default function MapView() {
   const [showREA, setShowREA] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
   const [showWAC, setShowWAC] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+
+  const isAnyCartaActive = showREA || showWAC;
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Botão Carta REA */}
+      {/* Botão para abrir caixa de seleção */}
       <button
-        onClick={() => setShowREA(prev => !prev)}
-        title={showREA ? "Ocultar Carta REA" : "Mostrar Carta REA"}
-        aria-label={showREA ? "Ocultar Carta REA" : "Mostrar Carta REA"}
+        onClick={() => setShowOptions(prev => !prev)}
+        title="Selecionar Cartas"
+        aria-label="Selecionar Cartas"
         style={{
           position: "absolute",
           top: "150px",
           left: "10px",
           zIndex: 1000,
           padding: "8px",
-          background: showREA ? "#0066cc" : "#444",
+          background: isAnyCartaActive ? "#0066cc" : "#444", // Azul se alguma carta ativa
           color: "#fff",
           border: "none",
           borderRadius: "6px",
@@ -38,6 +41,45 @@ export default function MapView() {
       >
         <Layers size={20} />
       </button>
+
+      {/* Caixa de seleção para REA e WAC */}
+      {showOptions && (
+        <div
+          onMouseLeave={() => setShowOptions(false)} // Fecha ao tirar o mouse
+          style={{
+            position: "absolute",
+            top: "200px",
+            left: "10px",
+            zIndex: 1000,
+            background: "#fff",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            padding: "10px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}
+        >
+          <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <input 
+              type="checkbox" 
+              checked={showREA} 
+              onChange={() => setShowREA(prev => !prev)} 
+            />
+            Carta REA
+          </label>
+
+          <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <input 
+              type="checkbox" 
+              checked={showWAC} 
+              onChange={() => setShowWAC(prev => !prev)} 
+            />
+            Carta WAC
+          </label>
+        </div>
+      )}
 
       {/* Botão Toggle do Painel de Rota */}
       <button
@@ -63,47 +105,22 @@ export default function MapView() {
       >
         <List size={20} />
       </button>
-      {/* Botão Carta WAC */}
-      <button
-        onClick={() => setShowWAC(prev => !prev)}
-        title={showWAC ? "Ocultar Carta WAC" : "Mostrar Carta WAC"}
-        aria-label={showWAC ? "Ocultar Carta WAC" : "Mostrar Carta WAC"}
-        style={{
-          position: "absolute",
-          top: "200px",
-          left: "10px",
-          zIndex: 1000,
-          padding: "8px",
-          background: showWAC ? "#0066cc" : "#444",
-          color: "#fff",
-          border: "none",
-          borderRadius: "6px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-          cursor: "pointer"
+
+      <MapContainer
+        center={[-23.2, -46.5]}
+        zoom={8}
+        style={{ height: "100vh", width: "100%" }}
+        whenCreated={(mapInstance) => {
+          window._leaflet_map = mapInstance;
         }}
       >
-        <Layers size={20} />
-      </button>
-
- <MapContainer
-  center={[-23.2, -46.5]}
-  zoom={8}
-  style={{ height: "100vh", width: "100%" }}
-  whenCreated={(mapInstance) => {
-    window._leaflet_map = mapInstance;
-  }}
->
-  <TileLayer
-    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-    attribution="© OpenStreetMap contributors"
-  />
-
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="© OpenStreetMap contributors"
+        />
 
         <CartaREAOverlay visible={showREA} />
-	<CartaWACOverlay visible={showWAC} />
+        <CartaWACOverlay visible={showWAC} />
 
         {/* Mantém Navegacao sempre montado, mas oculta visualmente quando necessário */}
         <div style={{ display: showPanel ? 'block' : 'none' }}>
