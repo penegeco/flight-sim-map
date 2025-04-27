@@ -294,7 +294,7 @@ const handleExport = async () => {
 	<button
   	onClick={() => exportRouteToFS2020(rota)}
   	style={{
-    	marginTop: 8,
+    	marginLeft: 8,
     	background: "#28a745",
     	color: "#fff",
     	border: "none",
@@ -303,8 +303,9 @@ const handleExport = async () => {
     	cursor: "pointer"
   	}}
 	>
-  	Exportar para Flight Simulator (.fpl)
+  	Exportar para MSFS (.pln)
 	</button>
+
         <h4 style={{ margin: '10px 0 6px' }}>Rota (arraste):</h4>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={rota.map(p => p.icao)} strategy={verticalListSortingStrategy}>

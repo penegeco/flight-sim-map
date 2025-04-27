@@ -5,10 +5,12 @@ import { useState } from "react";
 import { Layers, List } from "lucide-react";
 import CartaREAOverlay from "./components/CartaREAOverlay";
 import Navegacao from "./components/Navegacao";
+import CartaWACOverlay from "./components/CartaWACOverlay";
 
 export default function MapView() {
   const [showREA, setShowREA] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
+  const [showWAC, setShowWAC] = useState(false);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -61,6 +63,30 @@ export default function MapView() {
       >
         <List size={20} />
       </button>
+      {/* Botão Carta WAC */}
+      <button
+        onClick={() => setShowWAC(prev => !prev)}
+        title={showWAC ? "Ocultar Carta WAC" : "Mostrar Carta WAC"}
+        aria-label={showWAC ? "Ocultar Carta WAC" : "Mostrar Carta WAC"}
+        style={{
+          position: "absolute",
+          top: "200px",
+          left: "10px",
+          zIndex: 1000,
+          padding: "8px",
+          background: showWAC ? "#0066cc" : "#444",
+          color: "#fff",
+          border: "none",
+          borderRadius: "6px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+          cursor: "pointer"
+        }}
+      >
+        <Layers size={20} />
+      </button>
 
  <MapContainer
   center={[-23.2, -46.5]}
@@ -77,6 +103,7 @@ export default function MapView() {
 
 
         <CartaREAOverlay visible={showREA} />
+	<CartaWACOverlay visible={showWAC} />
 
         {/* Mantém Navegacao sempre montado, mas oculta visualmente quando necessário */}
         <div style={{ display: showPanel ? 'block' : 'none' }}>
