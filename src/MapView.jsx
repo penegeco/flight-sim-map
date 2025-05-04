@@ -109,7 +109,7 @@ export default function MapView() {
       <MapContainer
         center={[-23.2, -46.5]}
         zoom={8}
-        style={{ height: "100vh", width: "100%" }}
+        style={{ height: "100vh", width: "100%", cursor: "default" }}
         whenCreated={(mapInstance) => {
           window._leaflet_map = mapInstance;
         }}

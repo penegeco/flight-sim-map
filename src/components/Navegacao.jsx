@@ -28,6 +28,12 @@ import html2canvas from "html2canvas";
 import { exportRouteToFS2020 } from "../utils/fsExporter";
 
 const icon = new Icon({
+  iconUrl: "../src/image/triangle.png", //"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const iconOrgDest = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -292,7 +298,7 @@ const handleExport = async () => {
         <button onClick={limparRota}>Limpar rota</button>
 	<button onClick={handleExport}>Exportar rota para PDF</button>
 	<button
-  	onClick={() => exportRouteToFS2020(rota)}
+  onClick={() => exportRouteToFS2020(rota)}
   	style={{
     	marginLeft: 8,
     	background: "#28a745",
@@ -328,7 +334,13 @@ const handleExport = async () => {
         </>}
       </div>
       {rota.map((p, idx) => (
-        <Marker key={idx} position={[p.lat, p.lon]} icon={icon} draggable eventHandlers={{
+        <Marker key={idx} position={[p.lat, p.lon]} icon={
+	p.tipo === "origem"
+        ? iconOrgDest
+        : p.tipo === "destino"
+        ? iconOrgDest
+        : icon} 
+	draggable eventHandlers={{
           dragend: e => {
             const { lat, lng } = e.target.getLatLng();
             setRota(prev => prev.map(x => x.icao === p.icao ? { ...x, lat, lon: lng } : x));
