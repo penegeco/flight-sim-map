@@ -28,7 +28,7 @@ import html2canvas from "html2canvas";
 import { exportRouteToFS2020 } from "../utils/fsExporter";
 
 const icon = new Icon({
-  iconUrl: "../src/image/triangle.png", //"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconUrl: "/images/triangle.png", //"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
